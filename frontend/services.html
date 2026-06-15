@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Услуги и цени | Дентални клиники MNL</title>
+  <meta name="description" content="Дентални услуги в Младост 4 — профилактика, лечение на кариес, естетика, импланти, хирургия. Вижте цените и използвайте безплатните ни инструменти." />
+  <link rel="icon" type="image/svg+xml" href="/images/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div id="siteHeader"></div>
+
+  <section class="page-banner">
+    <div class="container" data-aos="fade-up">
+      <div class="breadcrumbs"><a href="/">Начало</a><span>›</span>Услуги</div>
+      <span class="eyebrow">Нашите услуги</span>
+      <h1 data-content="services_title">Пълна грижа за вашата усмивка</h1>
+      <p data-content="services_intro">От профилактика до сложни хирургични процедури — предлагаме всичко на едно място, с грижа и внимание към всеки пациент.</p>
+    </div>
+  </section>
+
+  <!-- ============ SERVICES ACCORDION ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="services-grid" id="servicesGrid"><div class="text-center" style="color:var(--text-muted)">Зареждане…</div></div>
+    </div>
+  </section>
+
+  <!-- ============ TOOLS ============ -->
+  <section class="section section-cream" id="tools">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <span class="eyebrow">Интерактивни инструменти</span>
+        <h2 class="section-title" data-content="tools_title">Опознайте усмивката си</h2>
+        <p class="section-intro" data-content="tools_intro">Безплатни онлайн инструменти, които ви помагат да разберете нуждите си — преди да дойдете при нас.</p>
+      </div>
+      <div class="tools-tabs" data-aos="fade-up">
+        <button class="tool-tab active" data-tool="chart"><i class="fa-solid fa-tooth"></i> Зъбна карта</button>
+        <button class="tool-tab" data-tool="smile"><i class="fa-solid fa-face-smile"></i> Smile Score</button>
+        <button class="tool-tab" data-tool="calc"><i class="fa-solid fa-calculator"></i> Ценови калкулатор</button>
+      </div>
+      <div class="tool-panel active" id="tool-chart" data-aos="fade-up">
+        <div class="tooth-chart-wrap">
+          <p style="color:var(--text-muted);margin-bottom:18px"><i class="fa-solid fa-hand-pointer" style="color:var(--primary)"></i> Кликнете върху зъба, който ви <strong>боли</strong> — ще видите чести проблеми, препоръчително лечение и можете да запазите час.</p>
+          <div id="toothChart"></div>
+        </div>
+      </div>
+      <div class="tool-panel" id="tool-smile" data-aos="fade-up"><div id="smileScore"></div></div>
+      <div class="tool-panel" id="tool-calc" data-aos="fade-up">
+        <p style="text-align:center;color:var(--text-muted);margin-bottom:22px">Изберете услугите, които ви интересуват, за ориентировъчна цена.</p>
+        <div class="calc-grid" id="calcGrid"></div>
+        <div class="calc-total"><div>Ориентировъчна стойност:</div><div class="sum" id="calcSum">0 лв.</div><div class="disclaimer">* Точната цена се определя след преглед при нашите специалисти.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container"><div class="cta-band" data-aos="zoom-in" data-cta-eyebrow="Безплатна консултация" data-cta-title="Не сте сигурни от какво имате нужда?" data-cta-text="Запазете безплатен профилактичен преглед — ще изготвим индивидуален план за лечение, съобразен с вас."></div></div>
+  </section>
+
+  <div id="siteFooter"></div>
+
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+  <script src="/js/components.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/tooth-chart.js"></script>
+  <script src="/js/smile-score.js"></script>
+  <script src="/js/price-calc.js"></script>
+</body>
+</html>

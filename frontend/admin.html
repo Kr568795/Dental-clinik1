@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin · Дентални клиники MNL</title>
+  <link rel="icon" type="image/svg+xml" href="/images/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+  <!-- Dashboard markup is served only to authenticated sessions (gated server-side). -->
+  <!-- ============ DASHBOARD ============ -->
+  <div class="admin" id="appView">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><img src="/images/logo.svg" alt="MNL" /><div><b>MNL Admin</b><small>Дентални клиники</small></div></div>
+      <div class="side-label">Табло</div>
+      <button class="nav-item active" data-view="dashboard"><i class="fa-solid fa-chart-line"></i> Статистики</button>
+      <button class="nav-item" data-view="appointments"><i class="fa-solid fa-calendar-check"></i> Заявки</button>
+      <button class="nav-item" data-view="calendar"><i class="fa-solid fa-calendar-days"></i> Календар</button>
+      <div class="side-label">Страници на сайта</div>
+      <button class="nav-item" data-view="p-home"><i class="fa-solid fa-house"></i> Начало</button>
+      <button class="nav-item" data-view="p-services"><i class="fa-solid fa-tooth"></i> Услуги</button>
+      <button class="nav-item" data-view="p-about"><i class="fa-solid fa-circle-info"></i> За нас</button>
+      <button class="nav-item" data-view="p-team"><i class="fa-solid fa-user-group"></i> Екип</button>
+      <button class="nav-item" data-view="p-gallery"><i class="fa-solid fa-image"></i> Галерия</button>
+      <button class="nav-item" data-view="p-contact"><i class="fa-solid fa-phone"></i> Контакт</button>
+      <div class="side-label">Настройки</div>
+      <button class="nav-item" data-view="p-settings"><i class="fa-solid fa-gear"></i> Общи настройки</button>
+      <button class="nav-item logout" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Изход</button>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="burger-admin" id="burgerAdmin"><i class="fa-solid fa-bars"></i></button>
+          <div class="title-wrap"><h1 id="viewTitle">Статистики</h1><div class="crumb" id="viewCrumb">Преглед на дейността</div></div>
+        </div>
+        <span class="user"><span class="av" id="userAv">A</span> <span id="adminUser">admin</span></span>
+      </div>
+
+      <!-- Dashboard -->
+      <section class="view active" id="view-dashboard">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Тук виждате обобщение на заявките. Управлявайте съдържанието на сайта от менюто вляво.</p>
+        <div class="accept-banner">
+          <div class="label">Приемате ли нови пациенти онлайн?
+            <small>Когато е изключено, формата за запазване на час на сайта се скрива.</small>
+          </div>
+          <label class="switch"><input type="checkbox" id="acceptToggle" /><span class="slider"></span></label>
+        </div>
+        <div class="cards" id="statCards"></div>
+        <div class="panel-box">
+          <h3>Последни заявки</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Дата</th><th>Пациент</th><th>Телефон</th><th>Услуга</th><th>Статус</th></tr></thead>
+              <tbody id="recentBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel-box">
+          <h3>Топ услуги (по брой заявки)</h3>
+          <div class="chart" id="topChart"><p style="color:var(--muted)">Зареждане…</p></div>
+        </div>
+      </section>
+
+      <!-- Appointments -->
+      <section class="view" id="view-appointments">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Прегледайте новите заявки, обадете се на пациента и натиснете „Потвърди" или „Откажи". Филтрирайте по статус/дата или свалете всичко като CSV.</p>
+        <div class="panel-box">
+          <div class="toolbar">
+            <select id="filterStatus"><option value="">Всички статуси</option><option value="new">Нови</option><option value="confirmed">Потвърдени</option><option value="cancelled">Отказани</option></select>
+            <input type="date" id="filterDate" />
+            <button class="btn btn-ghost btn-sm" id="clearFilters"><i class="fa-solid fa-xmark"></i> Изчисти</button>
+            <span class="spacer"></span>
+            <button class="btn btn-gold btn-sm" id="exportCsv"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Дата</th><th>Пациент</th><th>Телефон</th><th>Услуга</th><th>Желан час</th><th>Статус</th><th>Действия</th></tr></thead>
+              <tbody id="apptBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Calendar -->
+      <section class="view" id="view-calendar">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Прегледно по дни — всеки ден показва броя записани часове. Кликнете върху ден, за да видите часовете и данните на пациентите.</p>
+        <div class="cal-layout">
+          <div class="panel-box" id="adminCalWrap"></div>
+          <div class="panel-box" id="adminCalDay"><p style="color:var(--muted)">Изберете ден от календара.</p></div>
+        </div>
+      </section>
+
+      <!-- ===== PAGE: Начало ===== -->
+      <section class="view" id="view-p-home">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Всичко за <strong>началната страница</strong> — текстове, снимки и числа. Запазва се автоматично. (Услугите се управляват в „Услуги", причините и отзивите в „За нас".)</p>
+        <div id="content-home"></div>
+      </section>
+
+      <!-- ===== PAGE: Услуги ===== -->
+      <section class="view" id="view-p-services">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Всичко за страница <strong>Услуги</strong> — заглавия и самите услуги с цени.</p>
+        <div id="content-services"></div>
+        <div class="panel-box">
+          <div class="toolbar"><h3 style="margin:0">Услуги и цени</h3><span class="spacer"></span><button class="btn btn-primary btn-sm" id="addService"><i class="fa-solid fa-plus"></i> Нова услуга</button></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Име</th><th>Категория</th><th>Цена (€ / лв.)</th><th>Видима</th><th>Действия</th></tr></thead>
+              <tbody id="servicesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PAGE: За нас ===== -->
+      <section class="view" id="view-p-about">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Всичко за страница <strong>За нас</strong> — текстове, снимки, причините „Защо нас" и отзивите.</p>
+        <div id="content-about"></div>
+        <div id="col-why"></div>
+        <div class="panel-box">
+          <div class="toolbar"><h3 style="margin:0">Отзиви на пациенти</h3><span class="spacer"></span><button class="btn btn-primary btn-sm" id="addReview"><i class="fa-solid fa-plus"></i> Нов отзив</button></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Автор</th><th>Оценка</th><th>Съдържание</th><th>Видим</th><th>Действия</th></tr></thead>
+              <tbody id="reviewsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PAGE: Екип ===== -->
+      <section class="view" id="view-p-team">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Всичко за страница <strong>Екип</strong> — заглавия и членовете (снимка, име, специалност, биография).</p>
+        <div id="content-team"></div>
+        <div id="col-team"></div>
+      </section>
+
+      <!-- ===== PAGE: Галерия ===== -->
+      <section class="view" id="view-p-gallery">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Всичко за страница <strong>Галерия</strong> — заглавия и снимките.</p>
+        <div id="content-gallery"></div>
+        <div id="col-gallery"></div>
+      </section>
+
+      <!-- ===== PAGE: Контакт ===== -->
+      <section class="view" id="view-p-contact">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Всичко за страница <strong>Контакт</strong> — данни за връзка, работно време/календар и въпросите (FAQ).</p>
+        <div id="content-contact"></div>
+        <div id="col-faq"></div>
+      </section>
+
+      <!-- ===== PAGE: Общи настройки ===== -->
+      <section class="view" id="view-p-settings">
+        <p class="view-hint"><i class="fa-solid fa-circle-info"></i> Общи настройки — лого, футър, рейтинг и SEO. Запазва се автоматично.</p>
+        <div id="content-settings"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

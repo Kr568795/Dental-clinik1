@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Вход · MNL Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/images/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="login-card" id="loginForm" autocomplete="off">
+      <div class="brand"><img src="/images/logo.svg" alt="MNL" /><div><h2>MNL Admin</h2><small style="color:var(--muted)">Защитен вход</small></div></div>
+      <div class="field"><label>Потребител</label><input type="text" name="username" autocomplete="username" required autofocus /></div>
+      <div class="field"><label>Парола</label><input type="password" name="password" autocomplete="current-password" required /></div>
+      <button class="btn btn-primary btn-block" type="submit" id="loginBtn">Вход <i class="fa-solid fa-right-to-bracket"></i></button>
+      <div class="login-error" id="loginError"></div>
+      <p style="margin-top:18px;color:var(--muted);font-size:.78rem;text-align:center"><i class="fa-solid fa-lock"></i> Достъпът е ограничен. Опитите за вход се следят и ограничават.</p>
+    </form>
+  </div>
+  <script>
+    const form = document.getElementById('loginForm');
+    const err = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.style.display = 'none';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: form.username.value, password: form.password.value }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Грешка при вход.');
+        window.location.href = '/admin';
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.style.display = 'block';
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

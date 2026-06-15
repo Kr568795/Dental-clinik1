@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Контакт и запазване на час | Дентални клиники MNL</title>
+  <meta name="description" content="Запазете час онлайн в Дентални клиники MNL — Младост 4, бл. 418. Тел: 089 728 8776. Изберете удобен ден и час." />
+  <link rel="icon" type="image/svg+xml" href="/images/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div id="siteHeader"></div>
+
+  <section class="page-banner">
+    <div class="container" data-aos="fade-up">
+      <div class="breadcrumbs"><a href="/">Начало</a><span>›</span>Контакт</div>
+      <span class="eyebrow">Запазете час</span>
+      <h1 data-content="booking_title">Резервирайте за 1 минута</h1>
+      <p data-content="booking_intro">Попълнете формата и ще се свържем с вас за потвърждение.</p>
+    </div>
+  </section>
+
+  <!-- ============ BOOKING ============ -->
+  <section class="section" id="booking">
+    <div class="container">
+      <div class="booking-grid">
+        <div class="booking-form" data-aos="fade-right">
+          <div class="progress"><div class="step active"></div><div class="step"></div><div class="step"></div></div>
+          <form id="bookingForm" novalidate>
+            <div class="form-step active" data-step="1">
+              <h3 style="margin-bottom:18px">1. Вашите данни</h3>
+              <div class="field"><label>Три имена *</label><input type="text" name="full_name" required /><span class="err">Въведете вашите имена.</span></div>
+              <div class="field"><label>Телефон *</label><input type="tel" name="phone" required placeholder="0XX XXX XXXX" /><span class="err">Въведете валиден телефон.</span></div>
+              <div class="field"><label>Имейл (по избор)</label><input type="email" name="email" placeholder="you@example.com" /><span class="err">Невалиден имейл.</span></div>
+              <div class="form-nav"><span></span><button type="button" class="btn btn-primary" data-next>Напред <i class="fa-solid fa-arrow-right"></i></button></div>
+            </div>
+            <div class="form-step" data-step="2">
+              <h3 style="margin-bottom:18px">2. Услуга</h3>
+              <div class="field"><label>Изберете услуга *</label><select name="service" required id="bookingService"><option value="">— изберете —</option></select><span class="err">Изберете услуга.</span></div>
+              <div class="field"><label>Бележка (по избор)</label><textarea name="note" rows="3" placeholder="Опишете накратко вашия проблем…"></textarea></div>
+              <div class="form-nav"><button type="button" class="btn btn-outline" data-prev><i class="fa-solid fa-arrow-left"></i> Назад</button><button type="button" class="btn btn-primary" data-next>Напред <i class="fa-solid fa-arrow-right"></i></button></div>
+            </div>
+            <div class="form-step" data-step="3">
+              <h3 style="margin-bottom:18px">3. Дата и час</h3>
+              <div class="field"><label>Изберете ден *</label><div class="calendar" id="bookingCalendar"></div><input type="hidden" name="preferred_date" required id="bookingDate" /><span class="err">Изберете работен ден.</span></div>
+              <div class="field"><label>Изберете час *</label><div class="time-grid" id="timeGrid"><p class="slot-hint">Първо изберете ден от календара.</p></div><input type="hidden" name="preferred_time" required /><span class="err">Изберете свободен час.</span></div>
+              <div class="form-nav"><button type="button" class="btn btn-outline" data-prev><i class="fa-solid fa-arrow-left"></i> Назад</button><button type="submit" class="btn btn-primary" id="bookingSubmit">Запази час <i class="fa-solid fa-check"></i></button></div>
+            </div>
+          </form>
+          <div class="booking-success" id="bookingSuccess">
+            <div class="checkmark"><i class="fa-solid fa-check"></i></div>
+            <h3>Заявката е изпратена!</h3>
+            <p style="color:var(--text-muted);margin-top:8px">Благодарим ви. Ще се свържем с вас за потвърждение на часа.</p>
+            <button class="btn btn-outline" style="margin-top:20px" onclick="location.reload()">Нова заявка</button>
+          </div>
+        </div>
+
+        <div class="booking-info" data-aos="fade-left">
+          <h3>Свържете се с нас</h3>
+          <div class="info-row"><i class="fa-solid fa-location-dot"></i><div id="infoAddress">бл. 418, Младост 4, вх. 1 – партер, 1715 София</div></div>
+          <div class="info-row"><i class="fa-solid fa-phone"></i><div><a id="infoPhone" href="tel:+359897288776">089 728 8776</a><small>Обадете се за спешни случаи</small></div></div>
+          <div class="info-row"><i class="fa-solid fa-clock"></i><div id="infoHours">Пон–Пет: 09:00–18:00 | Събота: 09:00–13:00</div></div>
+          <iframe id="infoMap" src="https://www.google.com/maps?q=Младост+4+блок+418+София&output=embed" loading="lazy" title="Карта"></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="section section-cream" id="faq">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <span class="eyebrow">Често задавани въпроси</span>
+        <h2 class="section-title" data-content="faq_title">Имате въпрос? Имаме отговор</h2>
+      </div>
+      <div class="faq" id="faqList" data-aos="fade-up"></div>
+    </div>
+  </section>
+
+  <div id="siteFooter"></div>
+
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+  <script src="/js/components.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/booking.js"></script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+'use strict';
+
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
+const path = require('path');
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+
+const { sequelize } = require('./models');
+const { UPLOAD_DIR } = require('./config/paths');
+const { seedIfEmpty, counts } = require('./scripts/seed-core');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
+
+app.disable('x-powered-by');
+
+// ── Security headers (Helmet + Content-Security-Policy) ──
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'default-src': ["'self'"],
+        'script-src': ["'self'", "'unsafe-inline'", 'https://unpkg.com', 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
+        'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com', 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
+        'font-src': ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com'],
+        'img-src': ["'self'", 'data:', 'https:'],
+        'frame-src': ['https://www.google.com', 'https://maps.google.com'],
+        'connect-src': ["'self'"],
+        'object-src': ["'none'"],
+        'base-uri': ["'self'"],
+        'form-action': ["'self'"],
+      },
+    },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// ── General API rate limit (defence in depth) ───────────
+app.use('/api', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Твърде много заявки. Опитайте по-късно.' },
+}));
+
+// ── Server-side admin gate ──────────────────────────────
+// The dashboard HTML is NEVER served without a valid JWT session, so it cannot
+// be revealed via dev-tools / direct URL. Unauthenticated visitors get the
+// lightweight login page instead.
+function isAdminAuthed(req) {
+  const token = req.cookies && req.cookies.token;
+  if (!token) return false;
+  try { jwt.verify(token, process.env.JWT_SECRET); return true; }
+  catch { return false; }
+}
+app.get(['/admin/login', '/admin-login.html'], (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(path.join(FRONTEND_DIR, 'admin-login.html'));
+});
+app.get(['/admin', '/admin.html'], (req, res) => {
+  if (!isAdminAuthed(req)) return res.redirect('/admin/login');
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(path.join(FRONTEND_DIR, 'admin.html'));
+});
+
+// ── API routes ──────────────────────────────────────────
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/appointments', require('./routes/appointments'));
+app.use('/api/services', require('./routes/services'));
+app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/settings', require('./routes/settings'));
+app.use('/api/stats', require('./routes/stats'));
+app.use('/api/uploads', require('./routes/uploads'));
+
+const collections = require('./routes/collections');
+app.use('/api/team', collections.team);
+app.use('/api/gallery', collections.gallery);
+app.use('/api/faq', collections.faq);
+app.use('/api/why', collections.why);
+
+app.get('/api/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// ── Static frontend ─────────────────────────────────────
+// Clean URLs for the public pages.
+const PAGES = {
+  '/services': 'services.html',
+  '/about': 'about.html',
+  '/team': 'team.html',
+  '/gallery': 'gallery.html',
+  '/contact': 'contact.html',
+};
+Object.entries(PAGES).forEach(([route, file]) => {
+  app.get(route, (_req, res) => res.sendFile(path.join(FRONTEND_DIR, file)));
+});
+
+// Uploaded images live on the persistent Volume (outside the repo in
+// production), so serve them explicitly BEFORE the general static handler.
+app.use('/images/uploads', express.static(UPLOAD_DIR));
+
+// admin.html is intentionally NOT auto-served here — it is gated above.
+app.use(express.static(FRONTEND_DIR, { index: false }));
+app.get('/', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
+
+// ── Error handler ───────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
+app.use((err, _req, res, _next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Възникна вътрешна грешка.' });
+});
+
+// ── Boot ────────────────────────────────────────────────
+(async () => {
+  try {
+    await sequelize.authenticate();
+    // First boot on a fresh DB (e.g. new Railway Volume) seeds the demo data
+    // automatically. Existing data is never touched.
+    const seeded = await seedIfEmpty();
+    if (seeded) {
+      console.log(`🌱  Празна база — заредени ${counts.services} услуги, настройки и начален admin.`);
+    }
+    app.listen(PORT, () => {
+      console.log(`\n🦷  Дентални клиники MNL стартира на порт ${PORT}`);
+      console.log(`    Admin панел: /admin`);
+      console.log(`    DB dialect: ${process.env.DB_DIALECT || 'sqlite'}\n`);
+    });
+  } catch (err) {
+    console.error('Неуспешно стартиране:', err);
+    process.exit(1);
+  }
+})();

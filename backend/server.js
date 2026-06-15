@@ -75,6 +75,24 @@ app.get(['/admin', '/admin.html'], (req, res) => {
   res.sendFile(path.join(FRONTEND_DIR, 'admin.html'));
 });
 
+// ── Lazy DB init (works for both long-running and serverless) ──
+// On Vercel each cold start must connect (and on a fresh DB, seed) before the
+// first API request. The promise is cached so it runs at most once per instance.
+let _dbInit = null;
+function ensureDb() {
+  if (!_dbInit) {
+    _dbInit = (async () => {
+      await sequelize.authenticate();
+      const seeded = await seedIfEmpty();
+      if (seeded) console.log(`🌱  Празна база — заредени ${counts.services} услуги, настройки и начален admin.`);
+    })().catch((err) => { _dbInit = null; throw err; });
+  }
+  return _dbInit;
+}
+app.use('/api', async (req, res, next) => {
+  try { await ensureDb(); next(); } catch (e) { next(e); }
+});
+
 // ── API routes ──────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/appointments', require('./routes/appointments'));
@@ -121,22 +139,23 @@ app.use((err, _req, res, _next) => {
 });
 
 // ── Boot ────────────────────────────────────────────────
-(async () => {
-  try {
-    await sequelize.authenticate();
-    // First boot on a fresh DB (e.g. new Railway Volume) seeds the demo data
-    // automatically. Existing data is never touched.
-    const seeded = await seedIfEmpty();
-    if (seeded) {
-      console.log(`🌱  Празна база — заредени ${counts.services} услуги, настройки и начален admin.`);
-    }
-    app.listen(PORT, () => {
-      console.log(`\n🦷  Дентални клиники MNL стартира на порт ${PORT}`);
-      console.log(`    Admin панел: /admin`);
-      console.log(`    DB dialect: ${process.env.DB_DIALECT || 'sqlite'}\n`);
+// When run directly (local / a normal server) we connect, seed if needed, then
+// listen. On Vercel this file is imported by api/index.js as a serverless
+// handler, so it only EXPORTS the app — there is no app.listen() there, and the
+// DB is initialised lazily on the first /api request (see ensureDb above).
+if (require.main === module) {
+  ensureDb()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`\n🦷  Дентални клиники MNL стартира на порт ${PORT}`);
+        console.log(`    Admin панел: /admin`);
+        console.log(`    DB dialect: ${process.env.DB_DIALECT || 'sqlite'}\n`);
+      });
+    })
+    .catch((err) => {
+      console.error('Неуспешно стартиране:', err);
+      process.exit(1);
     });
-  } catch (err) {
-    console.error('Неуспешно стартиране:', err);
-    process.exit(1);
-  }
-})();
+}
+
+module.exports = app;

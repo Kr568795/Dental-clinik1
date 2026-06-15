@@ -2,22 +2,30 @@
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const multer = require('multer');
 const requireAuth = require('../middleware/auth');
 const { UPLOAD_DIR } = require('../config/paths');
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    const safe = Date.now() + '_' + Math.random().toString(36).slice(2, 8) + ext;
-    cb(null, safe);
-  },
-});
-
 const ALLOWED = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif'];
+
+// When a Blob store is connected (Vercel injects BLOB_READ_WRITE_TOKEN) we keep
+// the file in memory and push it to Blob storage — the disk is read-only there.
+// Otherwise (local / server with a disk) we write to UPLOAD_DIR as before.
+const USE_BLOB = !!process.env.BLOB_READ_WRITE_TOKEN;
+
+const storage = USE_BLOB
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+      filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+        cb(null, Date.now() + '_' + Math.random().toString(36).slice(2, 8) + ext);
+      },
+    });
+
 const upload = multer({
   storage,
   limits: { fileSize: 6 * 1024 * 1024 }, // 6 MB
@@ -30,10 +38,30 @@ const upload = multer({
 
 // Admin: upload one image, return its public URL.
 router.post('/', requireAuth, (req, res) => {
-  upload.single('file')(req, res, (err) => {
+  upload.single('file')(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'Няма файл.' });
-    return res.json({ url: '/images/uploads/' + req.file.filename });
+
+    try {
+      if (USE_BLOB) {
+        // Lazy-require so local installs without the package still work.
+        const { put } = require('@vercel/blob');
+        const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+        const name = 'uploads/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + ext;
+        const blob = await put(name, req.file.buffer, {
+          access: 'public',
+          contentType: req.file.mimetype,
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
+        return res.json({ url: blob.url });
+      }
+      // Disk mode: ensure dir exists, file already written by multer.
+      if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      return res.json({ url: '/images/uploads/' + req.file.filename });
+    } catch (e) {
+      console.error('Upload error:', e);
+      return res.status(500).json({ error: 'Качването се провали.' });
+    }
   });
 });
 

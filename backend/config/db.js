@@ -4,15 +4,25 @@ const path = require('path');
 const { Sequelize } = require('sequelize');
 const { DATA_DIR } = require('./paths');
 
-const dialect = process.env.DB_DIALECT || 'sqlite';
+// On Vercel (serverless) a managed Postgres is required. We auto-detect it:
+// if a Postgres connection string is present, use Postgres even without
+// DB_DIALECT being set explicitly.
+const PG_URL =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  '';
+const dialect = process.env.DB_DIALECT || (PG_URL ? 'postgres' : 'sqlite');
 
 let sequelize;
 
 if (dialect === 'postgres') {
-  // Production path: switch DB_DIALECT=postgres and provide DATABASE_URL.
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
+  // Production path: managed Postgres (Neon / Vercel Postgres / Railway).
+  sequelize = new Sequelize(PG_URL, {
     dialect: 'postgres',
     logging: false,
+    // Small pool — serverless functions are short-lived and many-instanced.
+    pool: { max: 3, min: 0, idle: 10000, acquire: 30000 },
     dialectOptions:
       process.env.NODE_ENV === 'production'
         ? { ssl: { require: true, rejectUnauthorized: false } }

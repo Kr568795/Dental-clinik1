@@ -20,8 +20,14 @@ const UPLOAD_DIR = process.env.DATA_DIR
   ? path.join(DATA_DIR, 'uploads')
   : path.join(__dirname, '..', '..', 'frontend', 'images', 'uploads');
 
+// Tolerant: on a read-only filesystem (e.g. Vercel) creating these dirs fails —
+// that's fine there, because the DB is Postgres and uploads go to Blob storage.
 function ensure(dir) {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  try {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  } catch (_e) {
+    /* read-only FS — ignore */
+  }
 }
 ensure(DATA_DIR);
 ensure(UPLOAD_DIR);

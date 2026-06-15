@@ -17,9 +17,16 @@ const dialect = process.env.DB_DIALECT || (PG_URL ? 'postgres' : 'sqlite');
 let sequelize;
 
 if (dialect === 'postgres') {
+  // Static requires so Vercel's file tracer bundles the driver. Sequelize
+  // normally loads it via a DYNAMIC require, which the tracer can't follow —
+  // that caused "Please install pg package manually" on Vercel. Passing the
+  // module via dialectModule also skips the dynamic lookup at runtime.
+  const pg = require('pg');
+  require('pg-hstore');
   // Production path: managed Postgres (Neon / Vercel Postgres / Railway).
   sequelize = new Sequelize(PG_URL, {
     dialect: 'postgres',
+    dialectModule: pg,
     logging: false,
     // Small pool — serverless functions are short-lived and many-instanced.
     pool: { max: 3, min: 0, idle: 10000, acquire: 30000 },

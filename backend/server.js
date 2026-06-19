@@ -20,6 +20,10 @@ const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
 
 app.disable('x-powered-by');
 
+// Behind Vercel's proxy: trust the first proxy so req.ip / X-Forwarded-For are
+// read correctly (fixes express-rate-limit's ValidationError on serverless).
+app.set('trust proxy', 1);
+
 // ── Security headers (Helmet + Content-Security-Policy) ──
 app.use(
   helmet({

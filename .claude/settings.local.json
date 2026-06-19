@@ -75,7 +75,9 @@
       "Bash(curl -s -o /dev/null -w \"/about %{http_code}\\\\n\" http://localhost:3100/about)",
       "Bash(node -e \"require\\('./backend/config/paths'\\); require\\('./backend/config/db'\\); require\\('./backend/scripts/seed-core'\\); console.log\\('OK: modules load, DATA_DIR=' + require\\('./backend/config/paths'\\).DATA_DIR\\);\")",
       "Bash(curl -s http://localhost:3100/api/services -o nul -w \"services HTTP %{http_code}\\\\n\")",
-      "PowerShell(Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force; \"Killed PID $_\" })"
+      "PowerShell(Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force; \"Killed PID $_\" })",
+      "Bash(node -e \"const l=require\\('./package-lock.json'\\); const k=Object.keys\\(l.packages||{}\\).filter\\(p=>p.includes\\('@vercel/blob'\\)\\); console.log\\(k.length?k:'НЕ Е НАМЕРЕН'\\); try{console.log\\('версия:', require\\('@vercel/blob/package.json'\\).version\\)}catch\\(e\\){console.log\\('не е инсталиран локално:', e.message\\)}\")",
+      "Bash(node -e \"const b=require\\('@vercel/blob'\\); console.log\\('put е функция:', typeof b.put==='function'\\)\")"
     ]
   }
 }

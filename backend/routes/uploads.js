@@ -11,10 +11,21 @@ const router = express.Router();
 
 const ALLOWED = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif'];
 
-// When a Blob store is connected (Vercel injects BLOB_READ_WRITE_TOKEN) we keep
-// the file in memory and push it to Blob storage — the disk is read-only there.
-// Otherwise (local / server with a disk) we write to UPLOAD_DIR as before.
-const USE_BLOB = !!process.env.BLOB_READ_WRITE_TOKEN;
+// Clean the token: strip surrounding quotes, whitespace and an accidental
+// "BLOB_READ_WRITE_TOKEN=" prefix (common copy-paste mistakes).
+function cleanToken(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/^BLOB_READ_WRITE_TOKEN\s*=\s*/i, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+}
+const BLOB_TOKEN = cleanToken(process.env.BLOB_READ_WRITE_TOKEN);
+
+// When a Blob store is connected we keep the file in memory and push it to Blob
+// storage — the disk is read-only there. Otherwise (local / server with a disk)
+// we write to UPLOAD_DIR as before.
+const USE_BLOB = !!BLOB_TOKEN;
 
 const storage = USE_BLOB
   ? multer.memoryStorage()
@@ -44,6 +55,10 @@ router.post('/', requireAuth, (req, res) => {
 
     try {
       if (USE_BLOB) {
+        // Safe diagnostic (no secret leaked): confirms the token's shape.
+        console.log(
+          `Blob upload: tokenLen=${BLOB_TOKEN.length} startsOk=${BLOB_TOKEN.startsWith('vercel_blob_rw_')} fileKB=${Math.round((req.file.size || 0) / 1024)}`
+        );
         // Lazy-require so local installs without the package still work.
         const { put } = require('@vercel/blob');
         const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
@@ -51,7 +66,7 @@ router.post('/', requireAuth, (req, res) => {
         const blob = await put(name, req.file.buffer, {
           access: 'public',
           contentType: req.file.mimetype,
-          token: process.env.BLOB_READ_WRITE_TOKEN,
+          token: BLOB_TOKEN,
         });
         return res.json({ url: blob.url });
       }
@@ -60,7 +75,7 @@ router.post('/', requireAuth, (req, res) => {
       return res.json({ url: '/images/uploads/' + req.file.filename });
     } catch (e) {
       console.error('Upload error:', e);
-      return res.status(500).json({ error: 'Качването се провали.' });
+      return res.status(500).json({ error: 'Качването се провали: ' + (e && e.message ? e.message : 'неизвестна грешка') });
     }
   });
 });

@@ -10,7 +10,8 @@ const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 
-const { sequelize } = require('./models');
+const fsp = require('fs').promises;
+const { sequelize, Setting } = require('./models');
 const { UPLOAD_DIR } = require('./config/paths');
 const { seedIfEmpty, counts } = require('./scripts/seed-core');
 
@@ -114,8 +115,59 @@ app.use('/api/why', collections.why);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
+// ── Server-side settings injection (no flash of old content) ────
+// We bake the saved images/text into the HTML before sending it, so the FIRST
+// paint already shows the correct content — no waiting for the client to fetch
+// /api/settings (which is slow on a serverless cold start).
+const _htmlCache = {};
+async function readPage(fileName) {
+  if (!_htmlCache[fileName]) {
+    _htmlCache[fileName] = await fsp.readFile(path.join(FRONTEND_DIR, fileName), 'utf8');
+  }
+  return _htmlCache[fileName];
+}
+
+const settingsCache = require('./utils/settingsCache');
+async function getSettingsCached() {
+  const cached = settingsCache.get();
+  if (cached) return cached;
+  const rows = await Setting.findAll();
+  const obj = {};
+  rows.forEach((r) => { obj[r.key] = r.value; });
+  settingsCache.set(obj);
+  return obj;
+}
+
+function injectSettings(html, settings) {
+  // Rewrite <img data-img="KEY" src="..."> so the saved image is there at load.
+  html = html.replace(/<img\b[^>]*>/g, (tag) => {
+    const m = tag.match(/data-img="([^"]+)"/);
+    if (!m || !settings[m[1]]) return tag;
+    const val = settings[m[1]];
+    return /\bsrc="[^"]*"/.test(tag)
+      ? tag.replace(/\bsrc="[^"]*"/, `src="${val}"`)
+      : tag.replace(/<img\b/, `<img src="${val}"`);
+  });
+  // Inline the settings so the client applies text/content instantly too.
+  const json = JSON.stringify(settings).replace(/</g, '\\u003c');
+  const scriptTag = `<script>window.__MNL_SETTINGS__=${json};</script>`;
+  return html.includes('</head>') ? html.replace('</head>', scriptTag + '</head>') : scriptTag + html;
+}
+
+async function servePage(res, fileName) {
+  try {
+    const [html, settings] = await Promise.all([readPage(fileName), getSettingsCached()]);
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.set('Cache-Control', 'no-cache');
+    return res.send(injectSettings(html, settings));
+  } catch (e) {
+    console.error('Page render error:', e);
+    return res.sendFile(path.join(FRONTEND_DIR, fileName));
+  }
+}
+
 // ── Static frontend ─────────────────────────────────────
-// Clean URLs for the public pages.
+// Clean URLs for the public pages (with settings injected).
 const PAGES = {
   '/services': 'services.html',
   '/about': 'about.html',
@@ -124,7 +176,7 @@ const PAGES = {
   '/contact': 'contact.html',
 };
 Object.entries(PAGES).forEach(([route, file]) => {
-  app.get(route, (_req, res) => res.sendFile(path.join(FRONTEND_DIR, file)));
+  app.get(route, (_req, res) => servePage(res, file));
 });
 
 // Uploaded images live on the persistent Volume (outside the repo in
@@ -133,7 +185,7 @@ app.use('/images/uploads', express.static(UPLOAD_DIR));
 
 // admin.html is intentionally NOT auto-served here — it is gated above.
 app.use(express.static(FRONTEND_DIR, { index: false }));
-app.get('/', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
+app.get('/', (_req, res) => servePage(res, 'index.html'));
 
 // ── Error handler ───────────────────────────────────────
 // eslint-disable-next-line no-unused-vars

@@ -77,7 +77,11 @@
       "Bash(curl -s http://localhost:3100/api/services -o nul -w \"services HTTP %{http_code}\\\\n\")",
       "PowerShell(Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force; \"Killed PID $_\" })",
       "Bash(node -e \"const l=require\\('./package-lock.json'\\); const k=Object.keys\\(l.packages||{}\\).filter\\(p=>p.includes\\('@vercel/blob'\\)\\); console.log\\(k.length?k:'НЕ Е НАМЕРЕН'\\); try{console.log\\('версия:', require\\('@vercel/blob/package.json'\\).version\\)}catch\\(e\\){console.log\\('не е инсталиран локално:', e.message\\)}\")",
-      "Bash(node -e \"const b=require\\('@vercel/blob'\\); console.log\\('put е функция:', typeof b.put==='function'\\)\")"
+      "Bash(node -e \"const b=require\\('@vercel/blob'\\); console.log\\('put е функция:', typeof b.put==='function'\\)\")",
+      "Bash(curl -s -m 10 \"http://localhost:3100/\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force }; \"stopped\")",
+      "Bash(git commit -q -m '@ *)",
+      "Bash(git push *)"
     ]
   }
 }

@@ -419,6 +419,11 @@ function renderFaq(items) {
 
 /* ---------- Boot data ---------- */
 (async function boot() {
+  // Apply settings baked into the page by the server FIRST (instant, no wait),
+  // so text/images are correct on first paint. The fetch below then refreshes.
+  if (window.__MNL_SETTINGS__) {
+    try { applySettings(window.__MNL_SETTINGS__); } catch (_e) { /* ignore */ }
+  }
   try {
     const [services, reviews, settings, team, gallery, why, faq] = await Promise.all([
       api('/services'),

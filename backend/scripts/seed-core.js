@@ -130,6 +130,9 @@ const SETTINGS = {
   img_team_main: '/images/team.jpg',
   img_before: '/images/before.jpg',
   img_after: '/images/after.jpg',
+
+  // Social share preview image (Open Graph) — editable from admin.
+  og_image: '/images/team.jpg',
 };
 
 const TEAM = [

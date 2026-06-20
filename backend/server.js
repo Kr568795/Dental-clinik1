@@ -138,7 +138,13 @@ async function getSettingsCached() {
   return obj;
 }
 
-function injectSettings(html, settings) {
+function absUrl(u, baseUrl) {
+  if (!u) return u;
+  if (/^https?:\/\//i.test(u)) return u; // already absolute (e.g. Blob URL)
+  return baseUrl + (u.startsWith('/') ? u : '/' + u);
+}
+
+function injectSettings(html, settings, baseUrl) {
   // Rewrite <img data-img="KEY" src="..."> so the saved image is there at load.
   html = html.replace(/<img\b[^>]*>/g, (tag) => {
     const m = tag.match(/data-img="([^"]+)"/);
@@ -148,18 +154,26 @@ function injectSettings(html, settings) {
       ? tag.replace(/\bsrc="[^"]*"/, `src="${val}"`)
       : tag.replace(/<img\b/, `<img src="${val}"`);
   });
+  // Social share image (og:image / twitter:image): use the admin-set image when
+  // present, and ALWAYS make it an absolute URL so previews load everywhere.
+  const ogReplacer = (full, pre, cur, post) =>
+    pre + absUrl(settings.og_image || cur, baseUrl) + post;
+  html = html.replace(/(<meta\s+property="og:image"\s+content=")([^"]*)(")/i, ogReplacer);
+  html = html.replace(/(<meta\s+name="twitter:image"\s+content=")([^"]*)(")/i, ogReplacer);
   // Inline the settings so the client applies text/content instantly too.
   const json = JSON.stringify(settings).replace(/</g, '\\u003c');
   const scriptTag = `<script>window.__MNL_SETTINGS__=${json};</script>`;
   return html.includes('</head>') ? html.replace('</head>', scriptTag + '</head>') : scriptTag + html;
 }
 
-async function servePage(res, fileName) {
+async function servePage(req, res, fileName) {
   try {
     const [html, settings] = await Promise.all([readPage(fileName), getSettingsCached()]);
+    const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+    const baseUrl = `${proto}://${req.headers.host}`;
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.set('Cache-Control', 'no-cache');
-    return res.send(injectSettings(html, settings));
+    return res.send(injectSettings(html, settings, baseUrl));
   } catch (e) {
     console.error('Page render error:', e);
     return res.sendFile(path.join(FRONTEND_DIR, fileName));
@@ -176,7 +190,7 @@ const PAGES = {
   '/contact': 'contact.html',
 };
 Object.entries(PAGES).forEach(([route, file]) => {
-  app.get(route, (_req, res) => servePage(res, file));
+  app.get(route, (req, res) => servePage(req, res, file));
 });
 
 // Uploaded images live on the persistent Volume (outside the repo in
@@ -185,7 +199,7 @@ app.use('/images/uploads', express.static(UPLOAD_DIR));
 
 // admin.html is intentionally NOT auto-served here — it is gated above.
 app.use(express.static(FRONTEND_DIR, { index: false }));
-app.get('/', (_req, res) => servePage(res, 'index.html'));
+app.get('/', (req, res) => servePage(req, res, 'index.html'));
 
 // ── Error handler ───────────────────────────────────────
 // eslint-disable-next-line no-unused-vars

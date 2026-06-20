@@ -430,6 +430,7 @@ const PAGE_CONTENT = {
     { title: 'SEO и социални', icon: 'fa-magnifying-glass', fields: [
       { key: 'meta_title', label: 'SEO заглавие' }, { key: 'meta_description', label: 'SEO описание', textarea: true },
       { key: 'whatsapp_number', label: 'WhatsApp номер' },
+      { key: 'og_image', label: 'Снимка при споделяне (Facebook/Viber)', type: 'image' },
     ]},
   ],
 };

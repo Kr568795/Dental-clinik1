@@ -596,6 +596,7 @@ const COLLECTIONS = {
   },
   gallery: {
     ep: '/gallery', title: 'Снимки в галерията', addLabel: 'Нова снимка',
+    sortable: true,
     columns: ['Снимка', 'Надпис', 'Видима'],
     fields: [
       { key: 'image', label: 'Снимка', type: 'image', required: true },
@@ -628,6 +629,7 @@ async function loadCollection(name) {
   const cfg = COLLECTIONS[name];
   const items = await api(cfg.ep + '/all');
   collectionCache[name] = items;
+  if (cfg.sortable) return renderSortableCollection(name, items);
   const rows = items.length
     ? items.map((it) => `<tr>${cfg.row(it)}<td class="row-actions">
         <button class="btn btn-sm btn-ghost" data-edit-col="${name}" data-id="${it.id}"><i class="fa-solid fa-pen"></i></button>
@@ -642,6 +644,74 @@ async function loadCollection(name) {
         <thead><tr>${cfg.columns.map((c) => `<th>${c}</th>`).join('')}<th>Действия</th></tr></thead>
         <tbody>${rows}</tbody></table></div>
     </div>`;
+}
+
+// Gallery (and any sortable collection): vertical drag-and-drop list.
+// Top = first on the site, bottom = last. No order numbers.
+function renderSortableCollection(name, items) {
+  const cfg = COLLECTIONS[name];
+  const list = items.length
+    ? items.map((it) => `
+      <li class="sort-item" draggable="true" data-id="${it.id}">
+        <span class="sort-handle" title="Провлачи"><i class="fa-solid fa-grip-vertical"></i></span>
+        <img class="sort-thumb" src="${esc(it.image || '')}" onerror="this.style.opacity=.2" />
+        <span class="sort-label">${esc(it.caption || '(без надпис)')}</span>
+        <span class="sort-vis">${it.visible ? '✅' : '🚫'}</span>
+        <span class="sort-actions">
+          <button class="btn btn-sm btn-ghost" data-edit-col="${name}" data-id="${it.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn btn-sm btn-danger" data-del-col="${name}" data-id="${it.id}"><i class="fa-solid fa-trash"></i></button>
+        </span>
+      </li>`).join('')
+    : `<li class="sort-empty">Все още няма снимки. Натиснете „${cfg.addLabel}".</li>`;
+  $('#col-' + name).innerHTML = `
+    <div class="panel-box">
+      <div class="toolbar"><h3 style="margin:0">${cfg.title}</h3><span class="spacer"></span>
+        <button class="btn btn-primary btn-sm" data-add-col="${name}"><i class="fa-solid fa-plus"></i> ${cfg.addLabel}</button></div>
+      <p class="sort-hint"><i class="fa-solid fa-arrows-up-down"></i> Провлачете снимките, за да смените реда. Най-горната се показва първа на сайта.</p>
+      <ul class="sort-list" id="sort-${name}">${list}</ul>
+    </div>`;
+  initSortable(name);
+}
+
+function sortAfterElement(list, y) {
+  const els = [...list.querySelectorAll('.sort-item:not(.dragging)')];
+  return els.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) return { offset, element: child };
+    return closest;
+  }, { offset: -Infinity }).element;
+}
+
+function initSortable(name) {
+  const list = document.getElementById('sort-' + name);
+  if (!list) return;
+  let dragEl = null;
+  list.querySelectorAll('.sort-item').forEach((li) => {
+    li.addEventListener('dragstart', () => { dragEl = li; setTimeout(() => li.classList.add('dragging'), 0); });
+    li.addEventListener('dragend', () => { li.classList.remove('dragging'); dragEl = null; persistOrder(name); });
+  });
+  list.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (!dragEl) return;
+    const after = sortAfterElement(list, e.clientY);
+    if (after == null) list.appendChild(dragEl);
+    else list.insertBefore(dragEl, after);
+  });
+}
+
+async function persistOrder(name) {
+  const list = document.getElementById('sort-' + name);
+  if (!list) return;
+  const ids = [...list.querySelectorAll('.sort-item')].map((li) => li.dataset.id);
+  const original = (collectionCache[name] || []).map((x) => String(x.id));
+  if (ids.join(',') === original.join(',')) return; // no change
+  try {
+    await Promise.all(ids.map((id, i) =>
+      api(COLLECTIONS[name].ep + '/' + id, { method: 'PUT', body: JSON.stringify({ sort_order: i }) })));
+    collectionCache[name] = ids.map((id) => (collectionCache[name] || []).find((x) => String(x.id) === id)).filter(Boolean);
+    toast('Редът е запазен.');
+  } catch (ex) { toast('Грешка при запазване на реда.', 'error'); loadCollection(name); }
 }
 
 function imageFieldHtml(f, val) {
@@ -665,12 +735,16 @@ function collectionModal(name, id) {
     if (f.type === 'textarea') return `<div><label>${f.label}${f.required ? ' *' : ''}</label><textarea name="${f.key}" rows="3" ${f.required ? 'required' : ''}>${esc(val)}</textarea></div>`;
     return `<div><label>${f.label}${f.required ? ' *' : ''}</label><input name="${f.key}" value="${esc(val)}" ${f.required ? 'required' : ''} /></div>`;
   }).join('');
+  // Sortable collections (gallery) order by drag-and-drop, so no number field.
+  const orderField = cfg.sortable
+    ? ''
+    : `<div><label>Подредба</label><input name="sort_order" type="number" value="${item.sort_order ?? 0}" /></div>`;
   openModal(`
     <h3>${id ? 'Редакция' : cfg.addLabel}</h3>
     <form class="admin-form" id="colForm">
       ${fieldsHtml}
       <div class="grid2">
-        <div><label>Подредба</label><input name="sort_order" type="number" value="${item.sort_order ?? 0}" /></div>
+        ${orderField}
         <label class="toggle" style="align-self:end"><input type="checkbox" name="visible" ${item.visible !== false ? 'checked' : ''} /> Видим на сайта</label>
       </div>
       <div class="modal-actions">
@@ -684,7 +758,9 @@ function collectionModal(name, id) {
   $('#colForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const payload = { sort_order: Number(fd.get('sort_order')) || 0, visible: fd.get('visible') === 'on' };
+    const payload = { visible: fd.get('visible') === 'on' };
+    if (!cfg.sortable) payload.sort_order = Number(fd.get('sort_order')) || 0;
+    else if (!id) payload.sort_order = (collectionCache[name] || []).length; // new → end of list
     cfg.fields.forEach((f) => { payload[f.key] = fd.get(f.key) || ''; });
     try {
       if (id) await api(cfg.ep + '/' + id, { method: 'PUT', body: JSON.stringify(payload) });

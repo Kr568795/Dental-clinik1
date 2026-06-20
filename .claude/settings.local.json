@@ -81,7 +81,8 @@
       "Bash(curl -s -m 10 \"http://localhost:3100/\")",
       "PowerShell(Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force }; \"stopped\")",
       "Bash(git commit -q -m '@ *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(node --check backend/server.js)"
     ]
   }
 }
